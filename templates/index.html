@@ -11,6 +11,7 @@
   <script src="https://cdn.jsdelivr.net/npm/xterm-addon-web-links/lib/xterm-addon-web-links.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xterm-addon-webgl/lib/xterm-addon-webgl.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xterm-addon-unicode11/lib/xterm-addon-unicode11.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xterm-addon-canvas/lib/xterm-addon-canvas.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/socket.io-client/dist/socket.io.js"></script> -->
   <link href="../static/xterm.css" rel="stylesheet">
   <script src="../static/xterm.js"></script>
@@ -18,14 +19,115 @@
   <script src="../static/addon-web-links.js"></script>
   <script src="../static/addon-webgl.js"></script>
   <script src="../static/addon-unicode11.js"></script>
+  <script src="../static/addon-canvas.js"></script>
   <script src="../static/socket.io.js"></script>
 
   <style>
-    body {
+    * {
       padding: 0;
       margin: 0;
+      box-sizing: border-box;
+    }
+
+    body {
       background-color: #f8f9fa;
       color: #343a40;
+    }
+
+    button {
+      background-color: #007bff;
+      color: #fff;
+      border: none;
+      border-radius: .25rem;
+      padding: .75rem 1rem;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    button:active {
+      transform: scale(0.95);
+      background-color: #004494;
+    }
+
+    button:focus {
+      outline: none;
+    }
+
+    button:disabled,
+    button:disabled:hover {
+      background-color: #6c757d;
+      cursor: not-allowed;
+    }
+
+    select {
+      /* 移除默认样式 */
+      appearance: none;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      background-color: #ffffff;
+      color: #343a40;
+      border: 1px solid #ced4da;
+      border-radius: .25rem;
+      padding: .75rem;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: border-color 0.3s ease;
+    }
+
+    select:hover {
+      border-color: #007bff;
+    }
+
+    select:focus {
+      outline: none;
+      border-color: #007bff;
+    }
+
+    /* 全局滚动条样式 */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+
+    /* 滚动条轨道 */
+    ::-webkit-scrollbar-track {
+      background: transparent;
+      border-radius: 3px;
+    }
+
+    /* 滚动条滑块 */
+    ::-webkit-scrollbar-thumb {
+      background: rgba(144, 147, 153, 0.3);
+      border-radius: 3px;
+      transition: background-color 0.2s;
+    }
+
+    /* 悬停状态 */
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(144, 147, 153, 0.5);
+    }
+
+    /* 激活状态 */
+    ::-webkit-scrollbar-thumb:active {
+      background: rgba(144, 147, 153, 0.7);
+    }
+
+    /* 滚动条角落 */
+    ::-webkit-scrollbar-corner {
+      background: transparent;
+    }
+
+    /* Firefox 兼容 */
+    @supports (scrollbar-color: auto) {
+      * {
+        scrollbar-width: thin;
+        scrollbar-color: rgba(144, 147, 153, 0.3) transparent;
+      }
     }
 
     .container {
@@ -35,36 +137,6 @@
       display: flex;
       flex-direction: column;
       align-items: start;
-
-    }
-
-    button {
-      width: 100px;
-      height: 40px;
-      background-color: #007bff;
-      color: #fff;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      transition: background-color 0.3s ease;
-
-      &:hover {
-        background-color: #0069d9;
-      }
-
-      &:active {
-        background-color: #0056b3;
-      }
-
-      &:focus {
-        outline: none;
-      }
-
-      &:disabled,
-      &:disabled:hover {
-        background-color: #6c757d;
-        cursor: not-allowed;
-      }
     }
 
     .header-wrapper {
@@ -89,6 +161,11 @@
 <body>
   <div class="container">
     <div class="header-wrapper">
+      <select id="serverSelect">
+        {% for server in servers %}
+        <option value="{{ server }}">{{ server }}</option>
+        {% endfor %}
+      </select>
       <button id="runButton">运行命令</button>
     </div>
     <div class="terminal-wrapper">
@@ -109,13 +186,13 @@
           foreground: '#3FB565'
         },
         // 光标闪烁
-        cursorBlink: true,
+        cursorBlink: false,
         // 是否允许使用建议的 api
         allowProposedApi: true,
         // 字体
         fontFamily: 'Fira Code, Consolas, Courier New, monospace',
         // 字体大小
-        fontSize: 13,
+        fontSize: 15,
         // 字符间距
         letterSpacing: 0,
         // 行高
@@ -129,18 +206,21 @@
       // 加载 FitAddon
       terminal.loadAddon(fitAddon)
 
+      const canvasAddon = new CanvasAddon.CanvasAddon()
+      terminal.loadAddon(canvasAddon)
+
       const unicode11Addon = new Unicode11Addon.Unicode11Addon()
-      unicode11Addon.activate(terminal)
+      terminal.loadAddon(unicode11Addon)
       terminal.unicode.activeVersion = '11'
 
       const webglAddon = new WebglAddon.WebglAddon()
       webglAddon.onContextLoss(() => {
         webglAddon.dispose()
       })
-      webglAddon.activate(terminal)
+      terminal.loadAddon(webglAddon)
 
       const webLinksAddon = new WebLinksAddon.WebLinksAddon()
-      webLinksAddon.activate(terminal)
+      terminal.loadAddon(webLinksAddon)
 
       // 将终端挂载到页面元素
       terminal.open(document.getElementById('terminal'))
@@ -159,6 +239,8 @@
         if (webglAddon) webglAddon.dispose()
         if (webLinksAddon) webLinksAddon.dispose()
         if (unicode11Addon) unicode11Addon.dispose()
+        if (canvasAddon) canvasAddon.dispose()
+
         console.log('终端和插件已销毁...')
       })
 
@@ -172,12 +254,14 @@
 
       // 按钮点击事件，触发命令执行
       document.getElementById('runButton').onclick = function () {
+        // 获取选择的服务器
+        const server = document.getElementById('serverSelect').value
         // 清空之前的输出
         terminal.clear()
         // 发送命令执行请求
-        socket.emit('run_command')
+        socket.emit('start_deploy', { server: server })
         // 提示正在执行
-        terminal.writeln('执行命令中...')
+        terminal.writeln('🚦 开始部署流程...')
       }
     });
   </script>
