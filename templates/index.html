@@ -2,33 +2,185 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebSocket Command Output</title>
-    <script src="https://cdn.socket.io/4.3.2/socket.io.min.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            var socket = io.connect('http://' + document.domain + ':' + location.port);
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WebSocket Command Output</title>
+  <!-- <link href="https://cdn.jsdelivr.net/npm/xterm/css/xterm.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/xterm/lib/xterm.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit/lib/xterm-addon-fit.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xterm-addon-web-links/lib/xterm-addon-web-links.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xterm-addon-webgl/lib/xterm-addon-webgl.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xterm-addon-unicode11/lib/xterm-addon-unicode11.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/socket.io-client/dist/socket.io.js"></script> -->
+  <link href="../static/xterm.css" rel="stylesheet">
+  <script src="../static/xterm.js"></script>
+  <script src="../static/addon-fit.js"></script>
+  <script src="../static/addon-web-links.js"></script>
+  <script src="../static/addon-webgl.js"></script>
+  <script src="../static/addon-unicode11.js"></script>
+  <script src="../static/socket.io.js"></script>
 
-            // 监听命令输出
-            socket.on('command_output', function (msg) {
-                var outputDiv = document.getElementById('output');
-                outputDiv.innerHTML += msg.data + '<br>';
-                outputDiv.scrollTop = outputDiv.scrollHeight;  // 自动滚动到底部
-            });
+  <style>
+    body {
+      padding: 0;
+      margin: 0;
+      background-color: #f8f9fa;
+      color: #343a40;
+    }
 
-            // 按钮点击事件，触发命令执行
-            document.getElementById('runButton').onclick = function() {
-                socket.emit('run_command');
-            };
-        });
-    </script>
+    .container {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: start;
+
+    }
+
+    button {
+      width: 100px;
+      height: 40px;
+      background-color: #007bff;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+
+      &:hover {
+        background-color: #0069d9;
+      }
+
+      &:active {
+        background-color: #0056b3;
+      }
+
+      &:focus {
+        outline: none;
+      }
+
+      &:disabled,
+      &:disabled:hover {
+        background-color: #6c757d;
+        cursor: not-allowed;
+      }
+    }
+
+    .header-wrapper {
+      width: 100%;
+      padding: 1rem;
+    }
+
+    .terminal-wrapper {
+      width: calc(100% - 2rem);
+      flex: 1 1 auto;
+      padding: 1rem;
+      background-color: #1e1e1e;
+    }
+
+    #terminal,
+    #terminal>.terminal {
+      height: 100%;
+    }
+  </style>
 </head>
 
 <body>
-    <h1>命令输出</h1>
-    <button id="runButton">运行命令</button>  <!-- 增加按钮以运行命令 -->
-    <div id="output" style="white-space: pre-wrap; border: 1px solid #ccc; padding: 10px; height: 300px; overflow-y: scroll;"></div>
+  <div class="container">
+    <div class="header-wrapper">
+      <button id="runButton">运行命令</button>
+    </div>
+    <div class="terminal-wrapper">
+      <div id="terminal"></div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const terminal = new Terminal({
+        // 渲染类型
+        rendererType: 'canvas',
+        // 启用时, 光标将设置为下一行的开头
+        convertEol: true,
+        // 背景色, https://xtermjs.org/docs/api/terminal/interfaces/itheme/
+        theme: {
+          background: '#1e1e1e',
+          foreground: '#3FB565'
+        },
+        // 光标闪烁
+        cursorBlink: true,
+        // 是否允许使用建议的 api
+        allowProposedApi: true,
+        // 字体
+        fontFamily: 'Fira Code, Consolas, Courier New, monospace',
+        // 字体大小
+        fontSize: 13,
+        // 字符间距
+        letterSpacing: 0,
+        // 行高
+        lineHeight: 1.2,
+        // 日志级别
+        logLevel: 'debug'
+      })
+
+      // 创建 FitAddon 实例
+      const fitAddon = new FitAddon.FitAddon()
+      // 加载 FitAddon
+      terminal.loadAddon(fitAddon)
+
+      const unicode11Addon = new Unicode11Addon.Unicode11Addon()
+      unicode11Addon.activate(terminal)
+      terminal.unicode.activeVersion = '11'
+
+      const webglAddon = new WebglAddon.WebglAddon()
+      webglAddon.onContextLoss(() => {
+        webglAddon.dispose()
+      })
+      webglAddon.activate(terminal)
+
+      const webLinksAddon = new WebLinksAddon.WebLinksAddon()
+      webLinksAddon.activate(terminal)
+
+      // 将终端挂载到页面元素
+      terminal.open(document.getElementById('terminal'))
+      // 调整终端大小以适应容器
+      fitAddon.fit()
+
+      // 处理窗口大小变化
+      window.addEventListener('resize', () => {
+        // 重新调整终端大小
+        fitAddon.fit()
+      })
+
+      window.addEventListener('beforeunload', () => {
+        if (terminal) terminal.dispose()
+        if (fitAddon) fitAddon.dispose()
+        if (webglAddon) webglAddon.dispose()
+        if (webLinksAddon) webLinksAddon.dispose()
+        if (unicode11Addon) unicode11Addon.dispose()
+        console.log('终端和插件已销毁...')
+      })
+
+      const socket = io.connect('http://' + document.domain + ':' + location.port)
+
+      // 监听命令输出
+      socket.on('command_output', function (msg) {
+        // 在终端中输出
+        terminal.writeln(msg.data)
+      })
+
+      // 按钮点击事件，触发命令执行
+      document.getElementById('runButton').onclick = function () {
+        // 清空之前的输出
+        terminal.clear()
+        // 发送命令执行请求
+        socket.emit('run_command')
+        // 提示正在执行
+        terminal.writeln('执行命令中...')
+      }
+    });
+  </script>
 </body>
 
 </html>
