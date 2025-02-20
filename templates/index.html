@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Command Output</title>
+    <script src="https://cdn.socket.io/4.3.2/socket.io.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var socket = io.connect('http://' + document.domain + ':' + location.port);
+
+            // 监听命令输出
+            socket.on('command_output', function (msg) {
+                var outputDiv = document.getElementById('output');
+                outputDiv.innerHTML += msg.data + '<br>';
+                outputDiv.scrollTop = outputDiv.scrollHeight;  // 自动滚动到底部
+            });
+
+            // 按钮点击事件，触发命令执行
+            document.getElementById('runButton').onclick = function() {
+                socket.emit('run_command');
+            };
+        });
+    </script>
+</head>
+
+<body>
+    <h1>命令输出</h1>
+    <button id="runButton">运行命令</button>  <!-- 增加按钮以运行命令 -->
+    <div id="output" style="white-space: pre-wrap; border: 1px solid #ccc; padding: 10px; height: 300px; overflow-y: scroll;"></div>
+</body>
+
+</html>
