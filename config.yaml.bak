@@ -1,6 +1,26 @@
+# 本地 vue 项目路径, 需自行配置 node 环境
 local_project_root: E:\My_Developments\test-vscode-vue
+# 服务器信息, 支持多个服务器, 然后前端进行选择要部署到哪个服务器
 servers:
+  # 服务器名称备注
   test:
+    # 服务器地址
+    host: xxx.xx.xx.xx
+    # 服务器端口
+    port: 22
+    # 服务器用户名
+    username: root
+    # 连接服务器的类型, 支持 key / password
+    auth_type: password
+    # 当 auth_type 为 password 时进行填写
+    password: xxxxxx
+    # 当 auth_type 为 key 时, 需要传入的密钥路径
+    key_path: C:/Users/me/.ssh/id_rsa
+    # 要部署到服务器的路径, 注意 linux 路径是 /, windows 路径是 \
+    deploy_path: /opt/test-deploy-vue
+    # 要将已经部署的 dist 文件夹备份的服务器路径
+    backup_path: /opt/test-deploy-vue-backup
+  test2:
     host: xxx.xx.xx.xx
     port: 22
     username: root

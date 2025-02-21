@@ -25,6 +25,8 @@ cd vue-auto-deploy-python
 pip install flask paramiko Flask-SocketIO
 ```
 
+需要将项目中的 `config.yaml.bak` 改为 `config.yaml` 并填写里面的相关配置信息
+
 ## 运行 Flask 应用程序
 ```bash
 python app.py

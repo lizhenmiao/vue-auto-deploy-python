@@ -193,6 +193,10 @@ def run_full_process(server_name, has_remote_origin, branch):
                 send_message("远程仓库存在，尝试拉取最新代码...")
                 execute_command("git pull", LOCAL_PROJECT_ROOT)
 
+        # 安装依赖
+        send_message("开始安装依赖...")
+        execute_command("npm install", LOCAL_PROJECT_ROOT)
+
         # 构建项目
         send_message("开始构建项目...")
         execute_command("npm run build", LOCAL_PROJECT_ROOT)
