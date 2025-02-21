@@ -65,6 +65,7 @@
     }
 
     select {
+      min-width: 10rem;
       /* 移除默认样式 */
       appearance: none;
       -webkit-appearance: none;
@@ -73,7 +74,7 @@
       color: #343a40;
       border: 1px solid #ced4da;
       border-radius: .25rem;
-      padding: .75rem;
+      padding: .75rem 1rem;
       font-size: 1rem;
       cursor: pointer;
       transition: border-color 0.3s ease;
@@ -147,6 +148,7 @@
     .terminal-wrapper {
       width: calc(100% - 2rem);
       flex: 1 1 auto;
+      overflow: hidden;
       padding: 1rem;
       background-color: #1e1e1e;
     }
@@ -163,11 +165,39 @@
     <div class="header-wrapper">
       <select id="serverSelect">
         {% for server in servers %}
-        <option value="{{ server }}">{{ server }}</option>
+          <option value="{{ server }}">{{ server }}</option>
         {% endfor %}
       </select>
+
+      {% if has_remote_origin and remote_branches and remote_branches|length > 0 %}
+        <select id="remoteBranchesSelect">
+          <option value="" disabled>---</option>
+          {% for branch in remote_branches %}
+            <option value="{{ branch }}" {% if current_branch == branch %}selected{% endif %}>{{ branch }}</option>
+          {% endfor %}
+        </select>
+      {% elif local_branches and local_branches|length > 0 %}
+        <select id="localBranchesSelect">
+          <option value="" disabled>---</option>
+          {% for branch in local_branches %}
+            <option value="{{ branch }}" {% if current_branch == branch %}selected{% endif %}>{{ branch }}</option>
+          {% endfor %}
+        </select>
+      {% endif %}
+
+      <script type="application/json">
+        {
+          "servers": {{ servers | tojson }},
+          "currentBranch": {{ current_branch | tojson }},
+          "remoteBranches": {{ remote_branches | tojson }},
+          "localBranches": {{ local_branches | tojson }},
+          "hasRemoteOrigin": {{ has_remote_origin }}
+        }
+      </script>
+
       <button id="runButton">运行命令</button>
     </div>
+
     <div class="terminal-wrapper">
       <div id="terminal"></div>
     </div>
@@ -186,13 +216,13 @@
           foreground: '#3FB565'
         },
         // 光标闪烁
-        cursorBlink: false,
+        cursorBlink: true,
         // 是否允许使用建议的 api
         allowProposedApi: true,
         // 字体
         fontFamily: 'Fira Code, Consolas, Courier New, monospace',
         // 字体大小
-        fontSize: 15,
+        fontSize: 14,
         // 字符间距
         letterSpacing: 0,
         // 行高
@@ -256,12 +286,22 @@
       document.getElementById('runButton').onclick = function () {
         // 获取选择的服务器
         const server = document.getElementById('serverSelect').value
+        // 获取 json 信息
+        const jsonContent = document.querySelector('script[type="application/json"]').textContent
+        const { servers, remoteBranches, localBranches, hasRemoteOrigin } = JSON.parse(jsonContent || '{}')
+
+        // 获取当前选择的分支
+        let branch = ''
+        if (hasRemoteOrigin && remoteBranches && remoteBranches.length > 0) {
+          branch = document.getElementById('remoteBranchesSelect').value
+        } else if (localBranches && localBranches.length > 0) {
+          branch = document.getElementById('localBranchesSelect').value
+        }
+
         // 清空之前的输出
         terminal.clear()
         // 发送命令执行请求
-        socket.emit('start_deploy', { server: server })
-        // 提示正在执行
-        terminal.writeln('🚦 开始部署流程...')
+        socket.emit('start_deploy', { server, branch, hasRemoteOrigin })
       }
     });
   </script>

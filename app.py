@@ -25,7 +25,8 @@ def send_message(message):
     # 判断是不是空消息, 不是的话再进行发送
     if message:
       # 在每条消息前添加时间, 格式为 YYYY-MM-DD HH:MM:SS
-      socketio.emit('command_output', {'data': f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {message}"})
+      # socketio.emit('command_output', {'data': f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {message}"})
+      socketio.emit('command_output', {'data': message})
 
 # 执行本地终端命令
 def execute_command(command, cwd):
@@ -44,7 +45,8 @@ def execute_command(command, cwd):
         if output == '' and process.poll() is not None:
             break
         if output:
-            send_message(output.strip())
+            # send_message(output.strip())
+            send_message(output)
 
     if process.returncode != 0:
         raise Exception(f"命令执行失败，退出码: {process.returncode}")
@@ -149,7 +151,8 @@ def deploy_to_server(server_name):
             # 执行命令并获取输出
             stdin, stdout, stderr = ssh.exec_command(' && '.join(commands))
             for line in stdout:
-                send_message(f"[{server_name}] {line.strip()}")
+                # send_message(f"[{server_name}] {line.strip()}")
+                send_message(f"[{server_name}] {line}")
 
         finally:
             send_message(f"关闭 sftp 连接...")
@@ -164,8 +167,10 @@ def deploy_to_server(server_name):
         raise
 
 # 执行完整的流程
-def run_full_process(server_name):
+def run_full_process(server_name, has_remote_origin, branch):
     """完整流程：检查环境 + 构建 + 部署"""
+    send_message('🚦 开始部署流程...')
+
     # 判断项目根目录是否存在
     if not os.path.exists(LOCAL_PROJECT_ROOT):
         send_message("项目根目录不存在！")
@@ -179,9 +184,18 @@ def run_full_process(server_name):
         send_message("检查Node版本...")
         execute_command("node -v", LOCAL_PROJECT_ROOT)
 
+        # 判断 branch 是否存在
+        if branch:
+            send_message(f"切换到分支：{branch}")
+            execute_command(f"git checkout {branch}", LOCAL_PROJECT_ROOT)
+            # 判断 hasRemoteOrigin 是否存在
+            if has_remote_origin:
+                send_message("远程仓库存在，尝试拉取最新代码...")
+                execute_command("git pull", LOCAL_PROJECT_ROOT)
+
         # 构建项目
         send_message("开始构建项目...")
-        execute_command("npm run build:prod", LOCAL_PROJECT_ROOT)
+        execute_command("npm run build", LOCAL_PROJECT_ROOT)
 
         # 部署到服务器
         deploy_to_server(server_name)
@@ -190,9 +204,73 @@ def run_full_process(server_name):
     except Exception as e:
         send_message(f"流程中断: {str(e)}")
 
+# 使用 git 命令判断是不是 git 仓库
+def is_git_repo(path):
+    try:
+        subprocess.check_call(['git', 'rev-parse', '--is-inside-work-tree'], cwd=path, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        return True
+    except subprocess.CalledProcessError:
+        return False
+
+# 使用 os 命令判断是不是 git 仓库
+def is_git_repo2(path):
+    return os.path.exists(os.path.join(path, '.git'))
+
+# 判断有没有远程分支
+def has_remote_origin(path):
+    try:
+        subprocess.check_call(['git', 'remote', 'get-url', 'origin'], cwd=path, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        return True
+    except subprocess.CalledProcessError:
+        return False
+
+# 获取当前分支
+def get_current_branch(path):
+    try:
+        return subprocess.check_output(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], cwd=path, text=True).strip()
+    except subprocess.CalledProcessError:
+        return None
+
+# 获取远程分支列表
+def get_remote_branches(path):
+    try:
+        # return [branch.strip().replace('origin/', '') for branch in subprocess.check_output(['git', 'branch', '-r'], cwd=path, text=True).strip().split('\n')[1:]]
+        return list(map(lambda branch: branch.strip().replace('origin/', ''), subprocess.check_output(['git', 'branch', '-r'], cwd=path, text=True).strip().split('\n')[1:]))
+    except subprocess.CalledProcessError:
+        return []
+
+# 获取本地分支列表
+def get_local_branches(path):
+    try:
+        return subprocess.check_output(['git', 'branch'], cwd=path, text=True).strip().split('\n')[1:]
+    except subprocess.CalledProcessError:
+        return []
+
 @app.route('/')
 def index():
-    return render_template('index.html', servers=list(SSH_CONFIGS.keys()))
+    # 判断指定目录是否是 git 仓库
+    if is_git_repo2(LOCAL_PROJECT_ROOT):
+        # 是 git 仓库的话, 获取当前选择的分支名称
+        current_branch = get_current_branch(LOCAL_PROJECT_ROOT)
+
+        # 判断有没有远程仓库
+        has_remote = has_remote_origin(LOCAL_PROJECT_ROOT)
+        if has_remote:
+            # 如果有远程仓库, 获取远程分支列表
+            remote_branches = get_remote_branches(LOCAL_PROJECT_ROOT)
+            # 本地分支列表
+            local_branches = []
+        else:
+            # 如果没有远程仓库, 获取本地分支列表
+            remote_branches = []
+            local_branches = get_local_branches(LOCAL_PROJECT_ROOT)
+    else:
+        # 如果不是 git 仓库, 就返回当前本地分支列表与当前选择的分支
+        current_branch = None
+        remote_branches = []
+        local_branches = []
+
+    return render_template('index.html', servers=list(SSH_CONFIGS.keys()), has_remote_origin="true" if has_remote else "false", current_branch=current_branch, remote_branches=remote_branches, local_branches=local_branches)
 
 @socketio.on('start_deploy')
 def handle_deploy(data):
@@ -200,7 +278,9 @@ def handle_deploy(data):
     if not server_name:
         send_message("错误：请选择目标服务器")
         return
-    threading.Thread(target=run_full_process, args=(server_name,)).start()
+    has_remote_origin = data.get('hasRemoteOrigin', False)
+    branch = data.get('branch', None)
+    threading.Thread(target=run_full_process, args=(server_name, has_remote_origin, branch)).start()
 
 if __name__ == '__main__':
     socketio.run(app, debug=True, host='0.0.0.0', port=8199)
