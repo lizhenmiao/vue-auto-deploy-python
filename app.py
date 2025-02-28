@@ -199,7 +199,7 @@ def run_full_process(server_name, has_remote_origin, branch):
 
         # 构建项目
         send_message("开始构建项目...")
-        execute_command("npm run build", LOCAL_PROJECT_ROOT)
+        execute_command("npm run build:prod", LOCAL_PROJECT_ROOT)
 
         # 部署到服务器
         deploy_to_server(server_name)

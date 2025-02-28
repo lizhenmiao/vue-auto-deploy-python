@@ -4,305 +4,483 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WebSocket Command Output</title>
-  <!-- <link href="https://cdn.jsdelivr.net/npm/xterm/css/xterm.css" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/xterm/lib/xterm.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit/lib/xterm-addon-fit.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/xterm-addon-web-links/lib/xterm-addon-web-links.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/xterm-addon-webgl/lib/xterm-addon-webgl.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/xterm-addon-unicode11/lib/xterm-addon-unicode11.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/xterm-addon-canvas/lib/xterm-addon-canvas.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/socket.io-client/dist/socket.io.js"></script> -->
-  <link href="../static/xterm.css" rel="stylesheet">
-  <script src="../static/xterm.js"></script>
-  <script src="../static/addon-fit.js"></script>
-  <script src="../static/addon-web-links.js"></script>
-  <script src="../static/addon-webgl.js"></script>
-  <script src="../static/addon-unicode11.js"></script>
-  <script src="../static/addon-canvas.js"></script>
+  <title>Deploy Dashboard</title>
+  <!-- <script src="https://cdn.jsdelivr.net/npm/socket.io-client/dist/socket.io.js"></script> -->
   <script src="../static/socket.io.js"></script>
+  <!-- https://github.com/NeXTs/Clusterize.js -->
+  <!-- https://clusterize.js.org/ -->
+  <!-- <link href="https://cdnjs.cloudflare.com/ajax/libs/clusterize.js/0.18.0/clusterize.min.css" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/clusterize.js/0.18.0/clusterize.min.js"></script> -->
+  <link href="../static/clusterize.min.css" rel="stylesheet">
+  <script src="../static/clusterize.min.js"></script>
 
   <style>
+    :root {
+      --primary-color: #0071e3;
+      --success-color: #34c759;
+      --error-color: #ff3b30;
+      --warning-color: #ff9500;
+      --background-color: #fbfbfd;
+      --text-color: #1d1d1f;
+      --secondary-text: #86868b;
+      --border-color: #d2d2d7;
+      --card-background: #ffffff;
+      --font-xs: 0.75rem;
+      --font-sm: 0.875rem;
+      --font-base: 1rem;
+      --spacing-xs: 0.5rem;
+      --spacing-sm: 0.75rem;
+      --spacing-base: 1rem;
+      --spacing-lg: 1.5rem;
+      --radius-sm: 8px;
+      --radius-base: 12px;
+    }
+
     * {
       padding: 0;
       margin: 0;
       box-sizing: border-box;
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;
     }
 
     body {
-      background-color: #f8f9fa;
-      color: #343a40;
-    }
-
-    button {
-      background-color: #007bff;
-      color: #fff;
-      border: none;
-      border-radius: .25rem;
-      padding: .75rem 1rem;
-      font-size: 1rem;
-      cursor: pointer;
-      transition: background-color 0.3s ease;
-    }
-
-    button:hover {
-      background-color: #0056b3;
-    }
-
-    button:active {
-      transform: scale(0.95);
-      background-color: #004494;
-    }
-
-    button:focus {
-      outline: none;
-    }
-
-    button:disabled,
-    button:disabled:hover {
-      background-color: #6c757d;
-      cursor: not-allowed;
-    }
-
-    select {
-      min-width: 10rem;
-      /* 移除默认样式 */
-      appearance: none;
-      -webkit-appearance: none;
-      -moz-appearance: none;
-      background-color: #ffffff;
-      color: #343a40;
-      border: 1px solid #ced4da;
-      border-radius: .25rem;
-      padding: .75rem 1rem;
-      font-size: 1rem;
-      cursor: pointer;
-      transition: border-color 0.3s ease;
-    }
-
-    select:hover {
-      border-color: #007bff;
-    }
-
-    select:focus {
-      outline: none;
-      border-color: #007bff;
-    }
-
-    /* 全局滚动条样式 */
-    ::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
-    }
-
-    /* 滚动条轨道 */
-    ::-webkit-scrollbar-track {
-      background: transparent;
-      border-radius: 3px;
-    }
-
-    /* 滚动条滑块 */
-    ::-webkit-scrollbar-thumb {
-      background: rgba(144, 147, 153, 0.3);
-      border-radius: 3px;
-      transition: background-color 0.2s;
-    }
-
-    /* 悬停状态 */
-    ::-webkit-scrollbar-thumb:hover {
-      background: rgba(144, 147, 153, 0.5);
-    }
-
-    /* 激活状态 */
-    ::-webkit-scrollbar-thumb:active {
-      background: rgba(144, 147, 153, 0.7);
-    }
-
-    /* 滚动条角落 */
-    ::-webkit-scrollbar-corner {
-      background: transparent;
-    }
-
-    /* Firefox 兼容 */
-    @supports (scrollbar-color: auto) {
-      * {
-        scrollbar-width: thin;
-        scrollbar-color: rgba(144, 147, 153, 0.3) transparent;
-      }
+      background-color: var(--background-color);
+      color: var(--text-color);
     }
 
     .container {
-      width: 100vw;
+      width: 100%;
       height: 100vh;
+      display: grid;
+      grid-template-columns: minmax(280px, 320px) 1fr;
       overflow: hidden;
+    }
+
+    .sidebar {
+      background: var(--card-background);
+      border-right: 1px solid var(--border-color);
+      padding: var(--spacing-lg);
+      overflow-y: auto;
       display: flex;
       flex-direction: column;
-      align-items: start;
+      gap: var(--spacing-lg);
+    }
+
+    .sidebar h2 {
+      font-size: var(--font-base);
+      font-weight: 600;
+      color: var(--text-color);
+      margin: 0;
+    }
+
+    .task-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-sm);
+    }
+
+    .task-item {
+      background: var(--background-color);
+      border-radius: var(--radius-base);
+      padding: var(--spacing-base);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border: 1px solid transparent;
+    }
+
+    .task-item:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+
+    .task-item.active {
+      border-color: var(--primary-color);
+      background: rgba(0, 113, 227, 0.05);
+    }
+
+    .task-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--spacing-xs);
+    }
+
+    .task-title {
+      font-size: var(--font-sm);
+      font-weight: 500;
+      color: var(--text-color);
+      margin: 0;
+    }
+
+    .task-status {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.25rem 0.5rem;
+      border-radius: 20px;
+      font-size: var(--font-xs);
+      font-weight: 500;
+      gap: 4px;
+    }
+
+    .task-status::before {
+      content: '';
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+    }
+
+    .status-running::before {
+      background-color: var(--primary-color);
+      animation: pulse 1.5s infinite;
+    }
+
+    .status-success::before {
+      background-color: var(--success-color);
+    }
+
+    .status-failed::before {
+      background-color: var(--error-color);
+    }
+
+    .status-pending::before {
+      background-color: var(--warning-color);
+    }
+
+    .task-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: var(--font-xs);
+      color: var(--secondary-text);
+    }
+
+    .task-time {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .task-branch {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.5; }
+      100% { opacity: 1; }
+    }
+
+    /* 响应式布局 */
+    @media (max-width: 768px) {
+      .container {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        display: none;
+      }
+
+      .controls {
+        flex-wrap: wrap;
+      }
+
+      select {
+        flex: 1 1 calc(50% - 0.5rem);
+        min-width: auto;
+      }
+
+      button {
+        flex: 1 1 100%;
+      }
+    }
+
+    .main-content {
+      display: flex;
+      flex-direction: column;
+      padding: 2rem;
+      overflow: hidden;
     }
 
     .header-wrapper {
+      margin-bottom: 2rem;
+    }
+
+    .controls {
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+    }
+
+    select {
+      min-width: 200px;
+      height: 40px;
+      padding: 0 1rem;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      background: var(--card-background);
+      font-size: 0.9rem;
+      color: var(--text-color);
+      transition: all 0.3s ease;
+    }
+
+    select:focus {
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 2px rgba(0, 113, 227, 0.2);
+    }
+
+    button {
+      height: 40px;
+      padding: 0 1.5rem;
+      border-radius: 8px;
+      border: none;
+      background: var(--primary-color);
+      color: white;
+      font-weight: 500;
+      transition: all 0.3s ease;
+    }
+
+    button:hover {
+      background: #0077ed;
+      transform: translateY(-1px);
+    }
+
+    #log-container {
       width: 100%;
-      padding: 1rem;
-    }
-
-    .terminal-wrapper {
-      width: calc(100% - 2rem);
-      flex: 1 1 auto;
-      overflow: hidden;
-      padding: 1rem;
-      background-color: #1e1e1e;
-    }
-
-    #terminal,
-    #terminal>.terminal {
       height: 100%;
+      background: #1d1d1f;
+      color: #3FB565;
+      font-family: 'Fira Code', monospace;
+      font-size: 14px;
+      padding: 1rem;
+      padding-right: 0;
+      border-radius: 12px;
+      overflow: hidden;
     }
+
+    .clusterize-scroll {
+      max-height: 100%;
+      overflow: auto;
+      padding-right: 1rem;
+    }
+    
+    .clusterize-scroll {
+      scrollbar-width: thin;
+      scrollbar-color: rgba(144, 147, 153, 0.3) transparent;
+    }
+    
+    /* Webkit 浏览器的滚动条样式 */
+    .clusterize-scroll::-webkit-scrollbar {
+      width: 6px;
+    }
+    
+    .clusterize-scroll::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    
+    .clusterize-scroll::-webkit-scrollbar-thumb {
+      background-color: rgba(144, 147, 153, 0.3);
+      border-radius: 3px;
+    }
+
+    .log-line {
+      padding: 2px 8px;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .log-line.error { color: #ff3b30; }
+    .log-line.warning { color: #ff9500; }
+    .log-line.success { color: #34c759; }
   </style>
 </head>
 
 <body>
   <div class="container">
-    <div class="header-wrapper">
-      <select id="serverSelect">
-        {% for server in servers %}
-          <option value="{{ server }}">{{ server }}</option>
-        {% endfor %}
-      </select>
+    <aside class="sidebar">
+      <h2>Deployment History</h2>
+      <div class="task-list">
+        <div class="task-item active">
+          <div class="task-header">
+            <h3 class="task-title">Production Deploy</h3>
+            <span class="task-status status-running">Running</span>
+          </div>
+          <div class="task-meta">
+            <div class="task-time">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M12 6v6l4 2"></path>
+              </svg>
+              Started 2 minutes ago
+            </div>
+            <div class="task-branch">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M6 3v12"></path>
+                <circle cx="6" cy="18" r="3"></circle>
+                <circle cx="6" cy="6" r="3"></circle>
+                <path d="M18 9c-3 0-6-3-6-3s3-3 6-3 6 3 6 3-3 3-6 3z"></path>
+              </svg>
+              main
+            </div>
+          </div>
+        </div>
 
-      {% if has_remote_origin and remote_branches and remote_branches|length > 0 %}
-        <select id="remoteBranchesSelect">
-          <option value="" disabled>---</option>
-          {% for branch in remote_branches %}
-            <option value="{{ branch }}" {% if current_branch == branch %}selected{% endif %}>{{ branch }}</option>
-          {% endfor %}
-        </select>
-      {% elif local_branches and local_branches|length > 0 %}
-        <select id="localBranchesSelect">
-          <option value="" disabled>---</option>
-          {% for branch in local_branches %}
-            <option value="{{ branch }}" {% if current_branch == branch %}selected{% endif %}>{{ branch }}</option>
-          {% endfor %}
-        </select>
-      {% endif %}
+        <div class="task-item">
+          <div class="task-header">
+            <h3 class="task-title">Staging Deploy</h3>
+            <span class="task-status status-success">Success</span>
+          </div>
+          <div class="task-meta">
+            <div class="task-time">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M12 6v6l4 2"></path>
+              </svg>
+              Completed 1 hour ago
+            </div>
+            <div class="task-branch">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M6 3v12"></path>
+                <circle cx="6" cy="18" r="3"></circle>
+                <circle cx="6" cy="6" r="3"></circle>
+                <path d="M18 9c-3 0-6-3-6-3s3-3 6-3 6 3 6 3-3 3-6 3z"></path>
+              </svg>
+              develop
+            </div>
+          </div>
+        </div>
 
-      <script type="application/json">
-        {
-          "servers": {{ servers | tojson }},
-          "currentBranch": {{ current_branch | tojson }},
-          "remoteBranches": {{ remote_branches | tojson }},
-          "localBranches": {{ local_branches | tojson }},
-          "hasRemoteOrigin": {{ has_remote_origin }}
-        }
-      </script>
+        <div class="task-item">
+          <span class="task-status status-failed">Failed</span>
+          <h3>Test Deploy</h3>
+          <p style="color: var(--secondary-text)">Failed 2 hours ago</p>
+        </div>
+        <div class="task-item">
+          <span class="task-status status-pending">Pending</span>
+          <h3>Dev Deploy</h3>
+          <p style="color: var(--secondary-text)">Queued 3 hours ago</p>
+        </div>
+      </div>
+    </aside>
 
-      <button id="runButton">运行命令</button>
-    </div>
+    <main class="main-content">
+      <div class="header-wrapper">
+        <div class="controls">
+          <select id="serverSelect">
+            {% for server in servers %}
+              <option value="{{ server }}">{{ server }}</option>
+            {% endfor %}
+          </select>
 
-    <div class="terminal-wrapper">
-      <div id="terminal"></div>
-    </div>
+          {% if has_remote_origin and remote_branches and remote_branches|length > 0 %}
+            <select id="remoteBranchesSelect">
+              <option value="" disabled>Select Branch</option>
+              {% for branch in remote_branches %}
+                <option value="{{ branch }}" {% if current_branch == branch %}selected{% endif %}>{{ branch }}</option>
+              {% endfor %}
+            </select>
+          {% elif local_branches and local_branches|length > 0 %}
+            <select id="localBranchesSelect">
+              <option value="" disabled>Select Branch</option>
+              {% for branch in local_branches %}
+                <option value="{{ branch }}" {% if current_branch == branch %}selected{% endif %}>{{ branch }}</option>
+              {% endfor %}
+            </select>
+          {% endif %}
+
+          <button id="runButton">Deploy</button>
+        </div>
+      </div>
+
+      <div id="log-container">
+        <div id="scrollArea" class="clusterize-scroll">
+          <div id="contentArea" class="clusterize-content">
+            <div class="clusterize-no-data">Loading data...</div>
+          </div>
+        </div>
+      </div>
+    </main>
   </div>
+
+  <script type="application/json">
+    {
+      "servers": {{ servers | tojson }},
+      "currentBranch": {{ current_branch | tojson }},
+      "remoteBranches": {{ remote_branches | tojson }},
+      "localBranches": {{ local_branches | tojson }},
+      "hasRemoteOrigin": {{ has_remote_origin }}
+    }
+  </script>
 
   <script>
     document.addEventListener('DOMContentLoaded', function () {
-      const terminal = new Terminal({
-        // 渲染类型
-        rendererType: 'canvas',
-        // 启用时, 光标将设置为下一行的开头
-        convertEol: true,
-        // 背景色, https://xtermjs.org/docs/api/terminal/interfaces/itheme/
-        theme: {
-          background: '#1e1e1e',
-          foreground: '#3FB565'
-        },
-        // 光标闪烁
-        cursorBlink: true,
-        // 是否允许使用建议的 api
-        allowProposedApi: true,
-        // 字体
-        fontFamily: 'Fira Code, Consolas, Courier New, monospace',
-        // 字体大小
-        fontSize: 14,
-        // 字符间距
-        letterSpacing: 0,
-        // 行高
-        lineHeight: 1.2,
-        // 日志级别
-        logLevel: 'debug'
-      })
-
-      // 创建 FitAddon 实例
-      const fitAddon = new FitAddon.FitAddon()
-      // 加载 FitAddon
-      terminal.loadAddon(fitAddon)
-
-      const canvasAddon = new CanvasAddon.CanvasAddon()
-      terminal.loadAddon(canvasAddon)
-
-      const unicode11Addon = new Unicode11Addon.Unicode11Addon()
-      terminal.loadAddon(unicode11Addon)
-      terminal.unicode.activeVersion = '11'
-
-      const webglAddon = new WebglAddon.WebglAddon()
-      webglAddon.onContextLoss(() => {
-        webglAddon.dispose()
-      })
-      terminal.loadAddon(webglAddon)
-
-      const webLinksAddon = new WebLinksAddon.WebLinksAddon()
-      terminal.loadAddon(webLinksAddon)
-
-      // 将终端挂载到页面元素
-      terminal.open(document.getElementById('terminal'))
-      // 调整终端大小以适应容器
-      fitAddon.fit()
-
-      // 处理窗口大小变化
-      window.addEventListener('resize', () => {
-        // 重新调整终端大小
-        fitAddon.fit()
-      })
-
-      window.addEventListener('beforeunload', () => {
-        if (terminal) terminal.dispose()
-        if (fitAddon) fitAddon.dispose()
-        if (webglAddon) webglAddon.dispose()
-        if (webLinksAddon) webLinksAddon.dispose()
-        if (unicode11Addon) unicode11Addon.dispose()
-        if (canvasAddon) canvasAddon.dispose()
-
-        console.log('终端和插件已销毁...')
-      })
-
       const socket = io.connect('http://' + document.domain + ':' + location.port)
+
+      // 初始化日志数组
+      let logs = [];
+      
+      // 初始化 Clusterize
+      const clusterize = new Clusterize({
+        scrollId: 'scrollArea',
+        contentId: 'contentArea',
+        rows_in_block: 50,
+        blocks_in_cluster: 4,
+      });
 
       // 监听命令输出
       socket.on('command_output', function (msg) {
-        // 在终端中输出
-        terminal.writeln(msg.data)
+        // 添加新日志
+        const logType = getLogType(msg.data);
+        logs.push(`<div class="log-line ${logType}">${msg.data}</div>`);
+        
+        // 更新显示
+        clusterize.update(logs);
+        
+        // 滚动到底部
+        const scrollArea = document.getElementById('scrollArea');
+        scrollArea.scrollTop = scrollArea.scrollHeight;
       })
 
-      // 按钮点击事件，触发命令执行
-      document.getElementById('runButton').onclick = function () {
-        // 获取选择的服务器
-        const server = document.getElementById('serverSelect').value
-        // 获取 json 信息
-        const jsonContent = document.querySelector('script[type="application/json"]').textContent
-        const { servers, remoteBranches, localBranches, hasRemoteOrigin } = JSON.parse(jsonContent || '{}')
+      // 判断日志类型
+      function getLogType(content) {
+        if (content.includes('error') || content.includes('失败')) return 'error';
+        if (content.includes('warning') || content.includes('警告')) return 'warning';
+        if (content.includes('success') || content.includes('成功')) return 'success';
+        return '';
+      }
 
-        // 获取当前选择的分支
-        let branch = ''
-        if (hasRemoteOrigin && remoteBranches && remoteBranches.length > 0) {
-          branch = document.getElementById('remoteBranchesSelect').value
-        } else if (localBranches && localBranches.length > 0) {
-          branch = document.getElementById('localBranchesSelect').value
+      // 按钮点击事件
+      document.getElementById('runButton').onclick = function () {
+        const server = document.getElementById('serverSelect').value;
+        const jsonContent = document.querySelector('script[type="application/json"]').textContent;
+        const { remoteBranches, localBranches, hasRemoteOrigin } = JSON.parse(jsonContent || '{}');
+
+        let branch = '';
+        if (hasRemoteOrigin && remoteBranches?.length > 0) {
+          branch = document.getElementById('remoteBranchesSelect').value;
+        } else if (localBranches?.length > 0) {
+          branch = document.getElementById('localBranchesSelect').value;
         }
 
-        // 清空之前的输出
-        terminal.clear()
+        // 清空之前的日志
+        logs = [];
+        clusterize.update([]);
+        
         // 发送命令执行请求
-        socket.emit('start_deploy', { server, branch, hasRemoteOrigin })
-      }
+        socket.emit('start_deploy', { server, branch, hasRemoteOrigin });
+      };
+
+      // 在现有的 DOMContentLoaded 事件处理程序中添加
+      document.querySelectorAll('.task-item').forEach(item => {
+        item.addEventListener('click', () => {
+          // 移除其他项的活动状态
+          document.querySelectorAll('.task-item').forEach(i => i.classList.remove('active'));
+          // 添加当前项的活动状态
+          item.classList.add('active');
+        });
+      });
     });
   </script>
 </body>
